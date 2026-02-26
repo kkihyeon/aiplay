@@ -3,65 +3,91 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AI 픽셀 사진기 - 멀티 디바이스 대응</title>
+    <title>AI 픽셀 사진기 - 멀티 디바이스 완벽 대응</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.min.js"></script>
     <script src="https://unpkg.com/ml5@0.6.0/dist/ml5.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
-        body { background-color: #f8fafc; font-family: 'Pretendard', sans-serif; margin: 0; padding: 0; -webkit-touch-callout: none; user-select: none; }
-        .canvas-wrapper { position: relative; width: 100%; border-radius: 1.5rem; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.1); background: #000; line-height: 0; }
-        canvas { display: block; width: 100% !important; height: auto !important; }
+        
+        body { 
+            background-color: #f8fafc; 
+            font-family: 'Pretendard', sans-serif; 
+            margin: 0; padding: 0; 
+            overflow-x: hidden;
+            -webkit-touch-callout: none;
+            user-select: none;
+        }
+
+        /* 캔버스 영역 내에서만 터치 스크롤 방지 */
+        canvas {
+            touch-action: none; 
+            border-radius: 1.5rem; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            background: #000;
+        }
+
         .mode-btn { transition: all 0.2s; border: 2px solid #e2e8f0; background: white; }
         .mode-btn.active { background-color: #4f46e5; color: white; border-color: #4338ca; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3); }
-        .color-dot { width: 40px; height: 40px; border-radius: 10px; cursor: pointer; border: 3px solid transparent; flex-shrink: 0; }
+        
+        .color-dot { width: 44px; height: 44px; border-radius: 12px; cursor: pointer; border: 3px solid transparent; flex-shrink: 0; }
         .color-dot.selected { border-color: #0f172a; transform: scale(1.1); }
-        #loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 100; }
+        
+        #loading-overlay { 
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: white; display: flex; flex-direction: column; 
+            align-items: center; justify-content: center; z-index: 100; 
+        }
+
+        .canvas-container { position: relative; width: 100%; max-width: 416px; margin: 0 auto; line-height: 0; }
     </style>
 </head>
 <body class="p-4 pb-24">
     <div id="loading-overlay">
         <div class="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mb-4"></div>
-        <p class="font-bold text-slate-800">카메라와 AI 연결 중...</p>
+        <p class="font-bold text-slate-800">AI 카메라와 친구가 되는 중...</p>
     </div>
 
     <div class="max-w-md mx-auto">
         <header class="text-center mb-6">
             <h1 class="text-3xl font-black text-indigo-600 mb-1 tracking-tighter">🎨 AI 픽셀 사진기</h1>
-            <p class="text-slate-500 font-medium text-sm">기기 맞춤형 화면 비율 적용 완료</p>
+            <p class="text-slate-500 font-medium text-xs">어떤 기기에서도 얼굴에 딱! 붙어요.</p>
         </header>
 
+        <!-- 모드 선택 -->
         <div class="flex justify-center mb-6 gap-2 bg-white p-2 rounded-2xl shadow-sm">
             <button id="mode-headband" class="mode-btn active flex-1 py-3 rounded-xl font-bold">👑 머리띠</button>
             <button id="mode-mask" class="mode-btn flex-1 py-3 rounded-xl font-bold">🎭 마스크</button>
         </div>
 
-        <div class="space-y-6">
-            <!-- 1. 그림판 -->
+        <div class="space-y-8">
+            <!-- 1. 그림판 섹션 -->
             <div>
                 <div class="flex justify-between items-center mb-2 px-1">
-                    <span class="text-xs font-black text-slate-500">그림 그리기 (32x32)</span>
-                    <button id="clear-btn" class="text-xs font-bold text-red-500">전체 삭제</button>
+                    <span class="text-xs font-black text-slate-500 uppercase tracking-widest">Step 1. 32x32 그림판</span>
+                    <button id="clear-btn" class="text-xs font-bold text-red-500 bg-red-50 px-3 py-1.5 rounded-lg">전체 삭제</button>
                 </div>
-                <div id="canvas-pixel" class="canvas-wrapper"></div>
-                <div class="mt-4 bg-white p-4 rounded-3xl shadow-md border border-slate-50">
-                    <div class="flex overflow-x-auto gap-2 pb-4" id="palette"></div>
-                    <div class="flex gap-2">
-                        <button id="eraser-btn" class="flex-1 py-4 bg-slate-100 text-slate-600 rounded-2xl font-black">🧽 지우개</button>
-                        <button id="capture-btn" class="flex-[1.5] py-4 bg-indigo-600 text-white rounded-2xl font-black shadow-lg shadow-indigo-100">📸 사진 찍기</button>
+                <div id="canvas-pixel" class="canvas-container"></div>
+                
+                <div class="mt-4 bg-white p-5 rounded-[2.5rem] shadow-xl border border-slate-50">
+                    <div class="flex overflow-x-auto gap-3 pb-4 mb-4" id="palette"></div>
+                    <div class="flex gap-3">
+                        <button id="eraser-btn" class="flex-1 py-4 bg-slate-100 text-slate-600 rounded-2xl font-black text-xl border-2 border-slate-100">🧽 지우개</button>
+                        <button id="capture-btn" class="flex-[1.5] py-4 bg-indigo-600 text-white rounded-2xl font-black text-xl shadow-lg shadow-indigo-100">📸 사진 찍기</button>
                     </div>
                 </div>
             </div>
 
-            <!-- 2. AI 카메라 -->
+            <!-- 2. AI 카메라 섹션 -->
             <div>
                 <div class="flex justify-between items-center mb-2 px-1">
                     <div class="flex items-center gap-2">
-                        <div id="status-dot" class="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></div>
-                        <span id="status-msg" class="text-xs font-black text-orange-600 uppercase">AI 준비 중</span>
+                        <div id="status-dot" class="w-2.5 h-2.5 bg-orange-500 rounded-full animate-pulse"></div>
+                        <span id="status-msg" class="text-xs font-black text-orange-600 uppercase">AI 얼굴 찾는 중...</span>
                     </div>
+                    <span class="text-[10px] font-bold text-slate-300 tracking-tighter italic">MIRROR MODE</span>
                 </div>
-                <div id="canvas-ai" class="canvas-wrapper"></div>
+                <div id="canvas-ai" class="canvas-container"></div>
             </div>
         </div>
     </div>
@@ -85,7 +111,7 @@
                 currentColor = c; isEraser = false;
                 document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('selected'));
                 div.classList.add('selected');
-                eraserBtn.classList.remove('ring-4', 'ring-indigo-200');
+                eraserBtn.classList.remove('ring-4', 'ring-indigo-200', 'bg-indigo-50');
             };
             paletteDiv.appendChild(div);
         });
@@ -93,7 +119,7 @@
         eraserBtn.onclick = () => {
             isEraser = true;
             document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('selected'));
-            eraserBtn.classList.add('ring-4', 'ring-indigo-200');
+            eraserBtn.classList.add('ring-4', 'ring-indigo-200', 'bg-indigo-50');
         };
 
         const setMode = (mode) => {
@@ -114,7 +140,7 @@
             p.draw = () => {
                 p.background(255);
                 p.drawGuide();
-                p.stroke(245); p.strokeWeight(0.5);
+                p.stroke(242); p.strokeWeight(0.5);
                 for(let i=0; i<=gridSize; i++) {
                     p.line(i*cellSize, 0, i*cellSize, p.height);
                     p.line(0, i*cellSize, p.width, i*cellSize);
@@ -154,20 +180,18 @@
 
         const aiSketch = (p) => {
             let video; let faceMesh; let predictions = [];
-            let videoScale = 1; let offsetX = 0; let offsetY = 0;
+            let vScale = 1; let offX = 0; let offY = 0;
 
             p.setup = () => {
                 let w = Math.min(window.innerWidth - 32, 416);
-                p.createCanvas(w, w); // 1:1 비율 고정
+                p.createCanvas(w, w);
 
                 const constraints = {
                     video: { facingMode: "user" },
                     audio: false
                 };
 
-                video = p.createCapture(constraints, () => {
-                    console.log("Video Ready");
-                });
+                video = p.createCapture(constraints);
                 video.elt.setAttribute('playsinline', '');
                 video.elt.muted = true;
                 video.hide();
@@ -182,53 +206,64 @@
             };
 
             p.draw = () => {
-                if (!video.elt.videoWidth) return;
+                if (video.elt.readyState < 2) return;
 
-                // 찌그러짐 방지 비율 계산 (Center Crop)
-                let vW = video.elt.videoWidth;
-                let vH = video.elt.videoHeight;
-                let scale = Math.max(p.width / vW, p.height / vH);
-                let rW = vW * scale;
-                let rH = vH * scale;
-                offsetX = (p.width - rW) / 2;
-                offsetY = (p.height - rH) / 2;
+                // --- 1. 비율 계산 (Center Crop) ---
+                let vW = video.width;
+                let vH = video.height;
+                vScale = Math.max(p.width / vW, p.height / vH);
+                let rW = vW * vScale;
+                let rH = vH * vScale;
+                offX = (p.width - rW) / 2;
+                offY = (p.height - rH) / 2;
 
-                // 1. 비디오만 반전해서 그리기
+                // --- 2. 거울 모드로 비디오 그리기 ---
                 p.push();
                 p.translate(p.width, 0);
                 p.scale(-1, 1);
-                p.image(video, -offsetX, offsetY, rW, rH);
+                p.image(video, offX, offY, rW, rH);
                 p.pop();
 
-                // 2. 픽셀 마스크 투영 (그림은 반전하지 않음)
+                // --- 3. 마스크 투영 (매칭 오류 해결) ---
                 if (predictions.length > 0) {
                     predictions.forEach(face => {
                         let scaledMesh = face.scaledMesh;
                         let target = (currentMode === 'headband') ? scaledMesh[10] : scaledMesh[168];
-                        let leftSide = scaledMesh[234], rightSide = scaledMesh[454];
-                        let faceDist = p.dist(leftSide[0], leftSide[1], rightSide[0], rightSide[1]);
                         
-                        // 거울 반전된 화면의 X 좌표 계산: CanvasWidth - (VideoX * Scale + OffsetX)
-                        let drawX = p.width - (target[0] * scale + offsetX);
-                        let drawY = target[1] * scale + offsetY;
+                        // 얼굴 너비 (스케일링용)
+                        let leftPoint = scaledMesh[234];
+                        let rightPoint = scaledMesh[454];
+                        let faceDist = p.dist(leftPoint[0], leftPoint[1], rightPoint[0], rightPoint[1]);
+                        
+                        // 핵심: 비디오가 거울 모드(Flip)이므로 마스크 좌표도 거울 위치로 반전
+                        // 1. 비디오 상의 실제 가로 위치 = target[0] * vScale + offX
+                        // 2. 이를 캔버스의 전체 너비에서 빼주면 거울 이미지가 있는 곳과 일치함
+                        let mappedX = target[0] * vScale + offX;
+                        let drawX = p.width - mappedX;
+                        let drawY = target[1] * vScale + offY;
 
                         p.push();
                         p.translate(drawX, drawY);
                         
-                        // 얼굴 크기에 비례한 픽셀 아트 스케일
-                        let s = (faceDist * scale) / (gridSize * (p.width/gridSize)) * 1.6;
-                        p.scale(s);
+                        // 그림판 사이즈(p.width) 대비 얼굴 크기 비율 계산
+                        let maskScale = (faceDist * vScale) / p.width * 1.6;
+                        p.scale(maskScale);
 
-                        if(currentMode === 'headband') p.translate(-(gridSize * (p.width/gridSize))/2, -(gridSize * (p.width/gridSize)) * 0.95);
-                        else p.translate(-(gridSize * (p.width/gridSize))/2, -(gridSize * (p.width/gridSize)) * 0.47);
+                        // 그림의 중심을 얼굴 포인트에 맞춤
+                        let centerOff = p.width / 2;
+                        if(currentMode === 'headband') {
+                            p.translate(-centerOff, -p.width * 0.95);
+                        } else {
+                            p.translate(-centerOff, -p.width * 0.47);
+                        }
 
-                        // 픽셀 그리기 (정방향)
-                        let drawCell = p.width/gridSize;
+                        // 픽셀 그림 그리기 (정방향)
+                        let dCell = p.width / gridSize;
                         for(let x=0; x<gridSize; x++) {
                             for(let y=0; y<gridSize; y++) {
                                 if(pixelGrid[x][y]) {
                                     p.noStroke(); p.fill(pixelGrid[x][y]);
-                                    p.rect(x*drawCell, y*drawCell, drawCell, drawCell);
+                                    p.rect(x*dCell, y*dCell, dCell, dCell);
                                 }
                             }
                         }
@@ -236,7 +271,10 @@
                     });
                 }
             };
-            document.getElementById('capture-btn').onclick = () => p.saveCanvas('my_ai_pixel_art', 'png');
+
+            document.getElementById('capture-btn').onclick = () => {
+                p.saveCanvas('my_ai_portrait', 'png');
+            };
         };
         new p5(aiSketch, 'canvas-ai');
     </script>
