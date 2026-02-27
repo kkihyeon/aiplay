@@ -81,9 +81,10 @@
         let bird;           // 플레이어 캐릭터
         let pipes = [];     // 장애물 배열
         let mic;            // 마이크 입력 객체
-        let isPlaying = false; // 게임 진행 상태 (물리 엔진 활성화 여부)
-        let isCountingDown = false; // 카운트다운 상태 여부
-        let countdownValue = "";    // 화면에 표시될 카운트다운 텍스트 (3, 2, 1, GO!)
+        let isPlaying = false;      // 실제 게임 플레이 중 (물리 엔진 작동)
+        let isCountingDown = false; // 카운트다운 진행 중
+        let isGameOver = false;     // 게임 오버 상태 (화면 정지)
+        let countdownValue = "";    // 화면에 표시될 카운트다운 텍스트
         let score = 0;      // 현재 점수
         let sensitivity = 5; // 마이크 감도
         let gameCanvas;     // 캔버스 객체
@@ -92,20 +93,14 @@
          * p5.js 초기 설정
          */
         function setup() {
-            // 반응형 캔버스 크기 결정
             let w = Math.min(window.innerWidth - 40, 400);
             let h = Math.min(window.innerHeight * 0.5, 500);
             
             gameCanvas = createCanvas(w, h);
             gameCanvas.parent('canvas-holder');
             
-            // 마이크 입력 초기화
             mic = new p5.AudioIn();
-            
-            // 초기 캐릭터 생성
             bird = new Bird();
-            
-            // 프레임레이트 고정
             frameRate(60);
         }
 
@@ -113,11 +108,10 @@
          * 메인 게임 루프
          */
         function draw() {
-            // 배경 그리기 (언제나 그려짐)
             background(15, 23, 42);
 
             // 1. 초기 대기 상태 (시작 전)
-            if (!isPlaying && !isCountingDown) {
+            if (!isPlaying && !isCountingDown && !isGameOver) {
                 drawStartScreen();
                 return;
             }
@@ -128,59 +122,60 @@
                 return;
             }
 
-            // 3. "GO!" 단계이거나 실제 게임 진행(isPlaying) 중일 때 게임 화면 표시
-            if (isPlaying || (isCountingDown && countdownValue === "GO!")) {
+            // 3. 게임 플레이 화면 또는 정지된 게임오버 화면 표시
+            // (isPlaying 이거나 isGameOver 이거나 GO! 문구 출력 중일 때)
+            if (isPlaying || isGameOver || (isCountingDown && countdownValue === "GO!")) {
                 
-                // 마이크 볼륨 가져오기
                 let vol = mic.getLevel(); 
 
-                // 실제 게임 진행 중일 때만 위치를 업데이트(update)함
+                // 실제 게임 중일 때만 데이터 업데이트
                 if (isPlaying) {
                     bird.update(vol);
                     
-                    // 장애물 생성 (100프레임마다)
                     if (frameCount % 100 == 0) {
                         pipes.push(new Pipe());
                     }
                 }
 
-                // 캐릭터는 항상 그림 (GO! 일 때는 정지 상태로 보임)
+                // 캐릭터 렌더링
                 bird.show();
 
-                // 장애물 관리
+                // 장애물 렌더링 및 로직
                 for (let i = pipes.length - 1; i >= 0; i--) {
                     pipes[i].show();
                     
                     if (isPlaying) {
                         pipes[i].update();
 
-                        // 캐릭터와 충돌 체크
                         if (pipes[i].hits(bird)) {
                             gameOver();
-                            break; // 중요: 충돌 시 배열이 비워지므로 즉시 반복문을 탈출하여 에러 방지
+                            break; 
                         }
 
-                        // 점수 계산
                         if (pipes[i].pass(bird)) {
                             score++;
                             document.getElementById('score-display').innerText = `SCORE: ${score}`;
                         }
                     }
 
-                    // 화면 밖으로 나간 장애물 제거 (게임 중일 때만 체크)
                     if (pipes.length > 0 && pipes[i] && pipes[i].offscreen()) {
                         pipes.splice(i, 1);
                     }
                 }
 
-                // 바닥/천장 충돌 체크 (게임 중일 때만)
+                // 천장/바닥 충돌 체크
                 if (isPlaying && bird.offScreen()) {
                     gameOver();
                 }
 
-                // "GO!" 문구가 아직 살아있다면 게임 화면 위에 덮어씌움
+                // 화면 덮어쓰기: 카운트다운 GO! 표시
                 if (isCountingDown && countdownValue === "GO!") {
                     drawCountdown();
+                }
+
+                // 화면 덮어쓰기: 게임 오버 문구 표시
+                if (isGameOver) {
+                    drawGameOver();
                 }
             }
         }
@@ -192,14 +187,14 @@
             constructor() {
                 this.y = height / 2;
                 this.x = 64;
-                this.gravity = 0.6;   // 중력 가속도
-                this.velocity = 0;    // 수직 속도
-                this.r = 16;          // 캐릭터 반지름
+                this.gravity = 0.6;   
+                this.velocity = 0;    
+                this.r = 16;          
             }
 
             show() {
                 noStroke();
-                fill(255, 235, 59); // 노란색 본체
+                fill(255, 235, 59); 
                 rectMode(CENTER);
                 rect(this.x, this.y, this.r * 2, this.r * 2, 4);
                 
@@ -273,7 +268,7 @@
         }
 
         /**
-         * 게임 유틸리티 함수들
+         * 게임 화면 UI 함수들
          */
         function drawStartScreen() {
             textAlign(CENTER);
@@ -298,9 +293,8 @@
         function drawCountdown() {
             textAlign(CENTER, CENTER);
             noStroke();
-            
             if (countdownValue === "GO!") {
-                fill(34, 197, 94); // 초록색
+                fill(34, 197, 94);
                 textSize(80);
                 stroke(255);
                 strokeWeight(6);
@@ -309,50 +303,58 @@
                 noStroke();
                 textSize(100);
             }
-            
             text(countdownValue, width / 2, height / 2);
         }
 
+        function drawGameOver() {
+            // 배경 어둡게 덮기 (반투명)
+            fill(0, 0, 0, 150);
+            rectMode(CORNER);
+            rect(0, 0, width, height);
+
+            // 게임오버 텍스트
+            textAlign(CENTER, CENTER);
+            noStroke();
+            fill(239, 68, 68); // Red
+            textSize(50);
+            textStyle(BOLD);
+            text("GAME OVER!", width / 2, height / 2);
+            
+            fill(255);
+            textSize(16);
+            textStyle(NORMAL);
+            text(`최종 점수: ${score}`, width / 2, height / 2 + 50);
+        }
+
         /**
-         * 카운트다운 시작 비동기 로직
+         * 제어 로직
          */
         async function startCountdown() {
             isCountingDown = true;
             isPlaying = false;
+            isGameOver = false; // 카운트다운 시작 시 게임오버 상태 해제
             
-            // 3, 2, 1 카운트다운
             for (let i = 3; i > 0; i--) {
                 countdownValue = i;
                 await new Promise(resolve => setTimeout(resolve, 1000));
             }
             
-            // "GO!" 표시 - 이 순간 draw()에서 게임 화면이 뒤에 나타남 (정지 상태)
             countdownValue = "GO!";
-            
-            // 0.8초 동안 "GO!" 문구를 보여준 뒤 게임 물리 엔진 시작
             await new Promise(resolve => setTimeout(resolve, 800));
             
-            // "GO!"가 사라지며 게임 시작
             isCountingDown = false;
             isPlaying = true;
-            frameCount = 0; // 장애물 생성 타이밍 초기화
+            frameCount = 0; 
         }
 
-        /**
-         * 게임 오버 처리
-         */
         function gameOver() {
             isPlaying = false;
-            isCountingDown = false;
+            isGameOver = true; // 화면을 멈춘 상태로 유지
             
             const btn = document.getElementById('start-btn');
             btn.innerText = "다시 도전하기";
-            // 색상 변경: indigo 제거 후 red 추가 (replace보다 안정적)
             btn.classList.remove('bg-indigo-600', 'hover:bg-indigo-500');
             btn.classList.add('bg-red-600', 'hover:bg-red-500');
-            
-            pipes = [];
-            bird = new Bird();
         }
 
         const startBtn = document.getElementById('start-btn');
@@ -365,7 +367,14 @@
             userStartAudio().then(() => {
                 mic.start();
                 
-                // 시작 시 UI 복구
+                // 만약 게임오버 상태였다면 데이터 초기화 후 시작
+                if (isGameOver) {
+                    pipes = [];
+                    bird = new Bird();
+                    score = 0;
+                    document.getElementById('score-display').innerText = `SCORE: 0`;
+                }
+
                 startBtn.innerText = "준비 하세요...";
                 startBtn.classList.remove('bg-red-600', 'hover:bg-red-500');
                 startBtn.classList.add('bg-indigo-600', 'hover:bg-indigo-500');
