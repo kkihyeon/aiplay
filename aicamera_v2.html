@@ -228,7 +228,7 @@
                 video.hide();
 
                 faceMesh = ml5.facemesh(video, () => {
-                    document.getElementById('status-msg').innerText = "LIVE 인식 중";
+                    document.getElementById('status-msg').innerText = "실시간 AI 인식 중";
                     document.getElementById('status-msg').classList.replace('text-orange-600', 'text-green-600');
                     document.getElementById('status-dot').classList.replace('bg-orange-500', 'bg-green-500');
                     document.getElementById('loading-overlay').style.opacity = '0';
