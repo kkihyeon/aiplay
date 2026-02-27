@@ -157,6 +157,7 @@
                         // 캐릭터와 충돌 체크
                         if (pipes[i].hits(bird)) {
                             gameOver();
+                            break; // 중요: 충돌 시 배열이 비워지므로 즉시 반복문을 탈출하여 에러 방지
                         }
 
                         // 점수 계산
@@ -166,8 +167,8 @@
                         }
                     }
 
-                    // 화면 밖으로 나간 장애물 제거
-                    if (pipes[i].offscreen()) {
+                    // 화면 밖으로 나간 장애물 제거 (게임 중일 때만 체크)
+                    if (pipes.length > 0 && pipes[i] && pipes[i].offscreen()) {
                         pipes.splice(i, 1);
                     }
                 }
@@ -337,11 +338,19 @@
             frameCount = 0; // 장애물 생성 타이밍 초기화
         }
 
+        /**
+         * 게임 오버 처리
+         */
         function gameOver() {
             isPlaying = false;
             isCountingDown = false;
-            document.getElementById('start-btn').innerText = "다시 도전하기";
-            document.getElementById('start-btn').classList.replace('bg-indigo-600', 'bg-red-600');
+            
+            const btn = document.getElementById('start-btn');
+            btn.innerText = "다시 도전하기";
+            // 색상 변경: indigo 제거 후 red 추가 (replace보다 안정적)
+            btn.classList.remove('bg-indigo-600', 'hover:bg-indigo-500');
+            btn.classList.add('bg-red-600', 'hover:bg-red-500');
+            
             pipes = [];
             bird = new Bird();
         }
@@ -355,8 +364,12 @@
 
             userStartAudio().then(() => {
                 mic.start();
+                
+                // 시작 시 UI 복구
                 startBtn.innerText = "준비 하세요...";
-                startBtn.classList.replace('bg-red-600', 'bg-indigo-600');
+                startBtn.classList.remove('bg-red-600', 'hover:bg-red-500');
+                startBtn.classList.add('bg-indigo-600', 'hover:bg-indigo-500');
+                
                 document.getElementById('mic-status').innerText = "마이크 활성";
                 document.getElementById('mic-dot').classList.replace('bg-red-500', 'bg-green-500');
                 
